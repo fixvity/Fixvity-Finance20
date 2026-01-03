@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Inflation Calculator</title>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
@@ -175,10 +176,22 @@ th:first-child,td:first-child{text-align:center}
 <div class="card">
 
   <div class="results">
-    <div class="result-box"><b id="futureValue">–</b><small>Future Value</small></div>
-    <div class="result-box"><b id="loss">–</b><small>Purchasing Power Lost</small></div>
-    <div class="result-box"><b id="percent">–</b><small>Total Inflation %</small></div>
-    <div class="result-box"><b id="yearsOut">–</b><small>Years</small></div>
+    <div class="result-box">
+      <b id="futureValue">–</b>
+      <small>Future Value</small>
+    </div>
+    <div class="result-box">
+      <b id="loss">–</b>
+      <small>Purchasing Power Lost</small>
+    </div>
+    <div class="result-box">
+      <b id="percent">–</b>
+      <small>Total Inflation %</small>
+    </div>
+    <div class="result-box">
+      <b id="years">–</b>
+      <small>Years</small>
+    </div>
   </div>
 
   <div class="chart-box">
@@ -213,36 +226,36 @@ function money(n){
 }
 
 function calculate(){
-  const A=+amount.value;
+  const amount=+amountEl.value;
   const start=+startYear.value;
   const end=+endYear.value;
-  const r=+rate.value/100;
+  const rate=(+rateEl.value)/100;
 
-  if(A<=0||r<0||end<=start){
+  if(end<=start || amount<=0 || rate<0){
     alert("Please enter valid values");
     return;
   }
 
-  const years=end-start;
-  let value=A;
+  const yearsCount=end-start;
+  let value=amount;
 
-  let rows="",labels=[],data=[];
+  let labels=[],data=[],rows="";
 
   for(let y=start;y<=end;y++){
     labels.push(y);
     data.push(value);
     rows+=`<tr><td>${y}</td><td>${money(value)}</td></tr>`;
-    value*=1+r;
+    value*=1+rate;
   }
 
-  const future=A*Math.pow(1+r,years);
-  const loss=future-A;
-  const percent=(loss/A)*100;
+  const future=value/(1+rate);
+  const loss=future-amount;
+  const inflationPct=(loss/amount)*100;
 
   futureValue.textContent=money(future);
   loss.textContent=money(loss);
-  percent.textContent=percent.toFixed(2)+"%";
-  yearsOut.textContent=years+" yrs";
+  percent.textContent=inflationPct.toFixed(2)+"%";
+  years.textContent=yearsCount+" yrs";
   table.innerHTML=rows;
 
   chart?.destroy();
@@ -264,6 +277,11 @@ function calculate(){
     }
   });
 }
+
+const amountEl=document.getElementById("amount");
+const startYear=document.getElementById("startYear");
+const endYear=document.getElementById("endYear");
+const rateEl=document.getElementById("rate");
 
 calculate();
 </script>
