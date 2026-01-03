@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Inflation Calculator</title>
+<title>Inflation Calculator v2</title>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
@@ -24,7 +25,11 @@ body{
   background:var(--bg);
   color:var(--text);
 }
-h1{text-align:center;color:var(--primary);margin:22px 0}
+h1{
+  text-align:center;
+  color:var(--primary);
+  margin:22px 0;
+}
 .container{max-width:1200px;margin:auto;padding:16px}
 .grid{display:grid;grid-template-columns:380px 1fr;gap:28px}
 .card{
@@ -33,8 +38,8 @@ h1{text-align:center;color:var(--primary);margin:22px 0}
   box-shadow:var(--shadow);
   padding:24px;
 }
-.section{margin-bottom:22px}
-.section h3{margin-bottom:12px;color:var(--primary)}
+.section{margin-bottom:20px}
+.section h3{margin-bottom:10px;color:var(--primary)}
 label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
 input,select{
   width:100%;
@@ -42,33 +47,40 @@ input,select{
   border-radius:12px;
   border:1px solid var(--border);
   font-size:14px;
-  margin-bottom:10px
+  margin-bottom:10px;
 }
 button{
-  padding:14px;border:none;border-radius:14px;
-  font-weight:600;cursor:pointer
+  padding:14px;
+  border:none;
+  border-radius:14px;
+  font-weight:600;
+  cursor:pointer;
 }
 .primary{background:var(--primary);color:#fff}
-.secondary{background:#eef2ff;margin-top:10px}
-.dark{background:#0f172a;color:#fff;margin-top:12px}
+.secondary{background:#eef2ff}
+.dark{background:#0f172a;color:#fff}
 
 .results{
   display:grid;
   grid-template-columns:repeat(4,1fr);
-  gap:14px;margin-bottom:18px
+  gap:14px;
+  margin-bottom:18px;
 }
 .result{
-  background:#f8fafc;border-radius:14px;
-  padding:14px;text-align:center
+  background:#f8fafc;
+  border-radius:14px;
+  padding:14px;
+  text-align:center;
 }
-.result b{display:block;font-size:18px}
+.result b{font-size:18px;display:block}
 .result small{font-size:12px;color:var(--muted)}
 
 .chart-box{height:280px;margin-bottom:18px}
 
 .table-wrap{
   border:1px solid var(--border);
-  border-radius:14px;overflow:hidden
+  border-radius:14px;
+  overflow:hidden;
 }
 .table-body{max-height:360px;overflow:auto}
 table{width:100%;border-collapse:collapse;font-size:13px}
@@ -84,7 +96,7 @@ th:first-child,td:first-child{text-align:center}
 </head>
 
 <body>
-<h1>📈 Inflation Calculator </h1>
+<h1>📈 Inflation Calculator v2</h1>
 
 <div class="container">
 <div class="grid">
@@ -112,11 +124,11 @@ th:first-child,td:first-child{text-align:center}
 
   <div class="section">
     <h3>Inflation Preset</h3>
-    <select id="preset" onchange="applyPreset()">
+    <select id="preset">
       <option value="custom">Custom</option>
-      <option value="2">Low Inflation (2%)</option>
+      <option value="2">Low (2%)</option>
       <option value="3">US Avg (3%)</option>
-      <option value="6">High Inflation (6%)</option>
+      <option value="6">High (6%)</option>
     </select>
   </div>
 
@@ -126,10 +138,10 @@ th:first-child,td:first-child{text-align:center}
     <input id="amount" value="1000">
 
     <label>Start Year</label>
-    <input id="startYear" value="2010">
+    <input id="start" value="2010">
 
     <label>End Year</label>
-    <input id="endYear" value="2025">
+    <input id="end" value="2025">
 
     <label>Annual Inflation Rate (%)</label>
     <input id="rate" value="3">
@@ -137,7 +149,8 @@ th:first-child,td:first-child{text-align:center}
 
   <button class="primary" onclick="calculate()">Calculate</button>
   <button class="secondary" onclick="location.reload()">Reset</button>
-  <button class="dark" onclick="window.print()">🖨 Print / Export</button>
+  <button class="dark" onclick="window.print()">🖨️ Print / Export</button>
+
 </div>
 
 <!-- RIGHT -->
@@ -150,13 +163,17 @@ th:first-child,td:first-child{text-align:center}
     <div class="result"><b id="years">–</b><small>Years</small></div>
   </div>
 
-  <div class="chart-box"><canvas id="chart"></canvas></div>
+  <div class="chart-box">
+    <canvas id="chart"></canvas>
+  </div>
 
   <h3>Year-by-Year Breakdown</h3>
   <div class="table-wrap">
     <div class="table-body">
       <table>
-        <thead><tr><th>Year</th><th>Value</th></tr></thead>
+        <thead>
+          <tr><th>Year</th><th>Value</th></tr>
+        </thead>
         <tbody id="table"></tbody>
       </table>
     </div>
@@ -170,46 +187,45 @@ th:first-child,td:first-child{text-align:center}
 let chart;
 
 function fmt(n){
-  const c=currency.value;
+  const c=document.getElementById("currency").value;
   return new Intl.NumberFormat("en-US",{style:"currency",currency:c}).format(n);
 }
 
-function applyPreset(){
-  if(preset.value!=="custom") rate.value=preset.value;
-}
+preset.onchange=()=>{ if(preset.value!=="custom") rate.value=preset.value; };
 
 function calculate(){
   const amt=+amount.value;
-  const start=+startYear.value;
-  const end=+endYear.value;
+  const startY=+start.value;
+  const endY=+end.value;
   const r=+rate.value/100;
-  const yrs=end-start;
   const modeVal=mode.value;
 
-  if(end<=start) return alert("End year must be greater");
+  if(endY<=startY){ alert("End year must be greater than start year"); return; }
 
-  let labels=[],data=[],rows="";
-  let adjusted,loss,percent;
+  const yrs=endY-startY;
+  let rows="",labels=[],data=[];
+
+  let adjusted,loss,percentVal;
 
   if(modeVal==="forward"){
-    adjusted=amt*Math.pow(1+r,yrs);
-    loss=adjusted-amt;
-    percent=(adjusted/amt-1)*100;
+    adjusted = amt*Math.pow(1+r,yrs);
+    loss = adjusted-amt;
+    percentVal = (adjusted/amt-1)*100;
 
     let v=amt;
-    for(let y=start;y<=end;y++){
+    for(let y=startY;y<=endY;y++){
       labels.push(y);
       data.push(v);
       rows+=`<tr><td>${y}</td><td>${fmt(v)}</td></tr>`;
       v*=1+r;
     }
   }else{
-    adjusted=amt/Math.pow(1+r,yrs);
-    loss=amt-adjusted;
-    percent=(amt/adjusted-1)*100;
+    adjusted = amt/Math.pow(1+r,yrs);
+    loss = amt-adjusted;
+    percentVal = (amt/adjusted-1)*100;
 
     let v=adjusted;
-    for(let y=start;y<=end;y++){
+    for(let y=startY;y<=endY;y++){
       labels.push(y);
       data.push(v);
       rows+=`<tr><td>${y}</td><td>${fmt(v)}</td></tr>`;
@@ -219,25 +235,27 @@ function calculate(){
 
   value.textContent=fmt(adjusted);
   loss.textContent=fmt(loss);
-  percent.textContent=percent.toFixed(2)+"%";
+  percent.textContent=percentVal.toFixed(2)+"%";
   years.textContent=yrs+" yrs";
   table.innerHTML=rows;
 
   chart?.destroy();
-  chart=new Chart(chartCanvas,{
+  chart=new Chart(document.getElementById("chart"),{
     type:"line",
-    data:{labels,datasets:[{
-      data,
-      borderColor:"#2563eb",
-      backgroundColor:"rgba(37,99,235,.15)",
-      fill:true,
-      tension:.35
-    }]},
+    data:{
+      labels,
+      datasets:[{
+        data,
+        borderColor:"#2563eb",
+        backgroundColor:"rgba(37,99,235,.15)",
+        fill:true,
+        tension:.35
+      }]
+    },
     options:{maintainAspectRatio:false,plugins:{legend:{display:false}}}
   });
 }
 
-const chartCanvas=document.getElementById("chart");
 calculate();
 </script>
 </body>
