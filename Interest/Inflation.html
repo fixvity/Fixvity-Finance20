@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Inflation Calculator v2</title>
+<title>Inflation Calculator</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
@@ -45,14 +45,12 @@ input,select{
   margin-bottom:10px
 }
 button{
-  padding:14px;
-  border:none;
-  border-radius:14px;
-  font-weight:600;
-  cursor:pointer
+  padding:14px;border:none;border-radius:14px;
+  font-weight:600;cursor:pointer
 }
 .primary{background:var(--primary);color:#fff}
 .secondary{background:#eef2ff;margin-top:10px}
+.dark{background:#0f172a;color:#fff;margin-top:12px}
 
 .results{
   display:grid;
@@ -75,33 +73,18 @@ button{
 .table-body{max-height:360px;overflow:auto}
 table{width:100%;border-collapse:collapse;font-size:13px}
 thead{background:#f1f5f9;position:sticky;top:0}
-th,td{
-  padding:8px;border-bottom:1px solid var(--border);
-  text-align:right
-}
+th,td{padding:8px;border-bottom:1px solid var(--border);text-align:right}
 th:first-child,td:first-child{text-align:center}
-
-.print-btn{
-  background:#0f172a;
-  color:#fff;
-  margin-top:12px;
-  width:100%;
-}
 
 @media(max-width:900px){
   .grid{grid-template-columns:1fr}
   .results{grid-template-columns:repeat(2,1fr)}
 }
-
-@media print{
-  button,select,input{display:none}
-  body{background:#fff}
-}
 </style>
 </head>
 
 <body>
-<h1>📈 Inflation Calculator v2</h1>
+<h1>📈 Inflation Calculator </h1>
 
 <div class="container">
 <div class="grid">
@@ -130,16 +113,15 @@ th:first-child,td:first-child{text-align:center}
   <div class="section">
     <h3>Inflation Preset</h3>
     <select id="preset" onchange="applyPreset()">
-      <option value="">Custom</option>
-      <option value="3">🇺🇸 USA Avg (3%)</option>
-      <option value="2">🇪🇺 EU Avg (2%)</option>
-      <option value="6">🇮🇳 India Avg (6%)</option>
+      <option value="custom">Custom</option>
+      <option value="2">Low Inflation (2%)</option>
+      <option value="3">US Avg (3%)</option>
+      <option value="6">High Inflation (6%)</option>
     </select>
   </div>
 
   <div class="section">
     <h3>Inflation Details</h3>
-
     <label>Amount</label>
     <input id="amount" value="1000">
 
@@ -155,33 +137,26 @@ th:first-child,td:first-child{text-align:center}
 
   <button class="primary" onclick="calculate()">Calculate</button>
   <button class="secondary" onclick="location.reload()">Reset</button>
-  <button class="print-btn" onclick="window.print()">🖨 Print / Export</button>
+  <button class="dark" onclick="window.print()">🖨 Print / Export</button>
 </div>
 
 <!-- RIGHT -->
 <div class="card">
 
   <div class="results">
-    <div class="result"><b id="future">–</b><small>Future Value</small></div>
+    <div class="result"><b id="value">–</b><small>Adjusted Value</small></div>
     <div class="result"><b id="loss">–</b><small>Purchasing Power Lost</small></div>
     <div class="result"><b id="percent">–</b><small>Total Inflation %</small></div>
     <div class="result"><b id="years">–</b><small>Years</small></div>
   </div>
 
-  <div class="chart-box">
-    <canvas id="chart"></canvas>
-  </div>
+  <div class="chart-box"><canvas id="chart"></canvas></div>
 
   <h3>Year-by-Year Breakdown</h3>
   <div class="table-wrap">
     <div class="table-body">
       <table>
-        <thead>
-          <tr>
-            <th>Year</th>
-            <th>Value</th>
-          </tr>
-        </thead>
+        <thead><tr><th>Year</th><th>Value</th></tr></thead>
         <tbody id="table"></tbody>
       </table>
     </div>
@@ -195,66 +170,70 @@ th:first-child,td:first-child{text-align:center}
 let chart;
 
 function fmt(n){
-  return new Intl.NumberFormat("en-US",{
-    style:"currency",
-    currency:currency.value
-  }).format(n);
+  const c=currency.value;
+  return new Intl.NumberFormat("en-US",{style:"currency",currency:c}).format(n);
 }
 
 function applyPreset(){
-  if(preset.value) rate.value=preset.value;
+  if(preset.value!=="custom") rate.value=preset.value;
 }
 
 function calculate(){
-  let amt=+amount.value;
-  let s=+startYear.value;
-  let e=+endYear.value;
-  let r=+rate.value/100;
-  let yrs=e-s;
+  const amt=+amount.value;
+  const start=+startYear.value;
+  const end=+endYear.value;
+  const r=+rate.value/100;
+  const yrs=end-start;
+  const modeVal=mode.value;
 
-  if(yrs<=0) return alert("End year must be greater than start year");
+  if(end<=start) return alert("End year must be greater");
 
   let labels=[],data=[],rows="";
-  let value=amt;
+  let adjusted,loss,percent;
 
-  if(mode.value==="reverse"){
-    value=amt/Math.pow(1+r,yrs);
+  if(modeVal==="forward"){
+    adjusted=amt*Math.pow(1+r,yrs);
+    loss=adjusted-amt;
+    percent=(adjusted/amt-1)*100;
+
+    let v=amt;
+    for(let y=start;y<=end;y++){
+      labels.push(y);
+      data.push(v);
+      rows+=`<tr><td>${y}</td><td>${fmt(v)}</td></tr>`;
+      v*=1+r;
+    }
+  }else{
+    adjusted=amt/Math.pow(1+r,yrs);
+    loss=amt-adjusted;
+    percent=(amt/adjusted-1)*100;
+
+    let v=adjusted;
+    for(let y=start;y<=end;y++){
+      labels.push(y);
+      data.push(v);
+      rows+=`<tr><td>${y}</td><td>${fmt(v)}</td></tr>`;
+      v*=1+r;
+    }
   }
 
-  for(let y=s;y<=e;y++){
-    labels.push(y);
-    data.push(value);
-    rows+=`<tr><td>${y}</td><td>${fmt(value)}</td></tr>`;
-    value*=1+r;
-  }
-
-  let futureVal=data[data.length-1];
-  let lossVal=futureVal-amt;
-  let percentVal=((futureVal/amt)-1)*100;
-
-  future.textContent=fmt(futureVal);
-  loss.textContent=fmt(lossVal);
-  percent.textContent=percentVal.toFixed(2)+"%";
+  value.textContent=fmt(adjusted);
+  loss.textContent=fmt(loss);
+  percent.textContent=percent.toFixed(2)+"%";
   years.textContent=yrs+" yrs";
   table.innerHTML=rows;
 
   chart?.destroy();
   chart=new Chart(chartCanvas,{
     type:"line",
-    data:{
-      labels,
-      datasets:[{
-        data,
-        borderColor:"#2563eb",
-        backgroundColor:"rgba(37,99,235,.15)",
-        fill:true,
-        tension:.35
-      }]
-    },
-    options:{
-      maintainAspectRatio:false,
-      plugins:{legend:{display:false}}
-    }
+    data:{labels,datasets:[{
+      data,
+      borderColor:"#2563eb",
+      backgroundColor:"rgba(37,99,235,.15)",
+      fill:true,
+      tension:.35
+    }]},
+    options:{maintainAspectRatio:false,plugins:{legend:{display:false}}}
   });
 }
 
