@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Inflation Calculator</title>
+<title>Inflation Calculator v2</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
@@ -45,8 +45,11 @@ input,select{
   margin-bottom:10px
 }
 button{
-  padding:14px;border:none;border-radius:14px;
-  font-weight:600;cursor:pointer
+  padding:14px;
+  border:none;
+  border-radius:14px;
+  font-weight:600;
+  cursor:pointer
 }
 .primary{background:var(--primary);color:#fff}
 .secondary{background:#eef2ff;margin-top:10px}
@@ -78,21 +81,42 @@ th,td{
 }
 th:first-child,td:first-child{text-align:center}
 
+.print-btn{
+  background:#0f172a;
+  color:#fff;
+  margin-top:12px;
+  width:100%;
+}
+
 @media(max-width:900px){
   .grid{grid-template-columns:1fr}
   .results{grid-template-columns:repeat(2,1fr)}
+}
+
+@media print{
+  button,select,input{display:none}
+  body{background:#fff}
 }
 </style>
 </head>
 
 <body>
-<h1>📈 Inflation Calculator</h1>
+<h1>📈 Inflation Calculator v2</h1>
 
 <div class="container">
 <div class="grid">
 
 <!-- LEFT -->
 <div class="card">
+
+  <div class="section">
+    <h3>Mode</h3>
+    <select id="mode">
+      <option value="forward">Forward Inflation</option>
+      <option value="reverse">Reverse Inflation</option>
+    </select>
+  </div>
+
   <div class="section">
     <h3>Currency</h3>
     <select id="currency">
@@ -104,7 +128,18 @@ th:first-child,td:first-child{text-align:center}
   </div>
 
   <div class="section">
+    <h3>Inflation Preset</h3>
+    <select id="preset" onchange="applyPreset()">
+      <option value="">Custom</option>
+      <option value="3">🇺🇸 USA Avg (3%)</option>
+      <option value="2">🇪🇺 EU Avg (2%)</option>
+      <option value="6">🇮🇳 India Avg (6%)</option>
+    </select>
+  </div>
+
+  <div class="section">
     <h3>Inflation Details</h3>
+
     <label>Amount</label>
     <input id="amount" value="1000">
 
@@ -118,30 +153,19 @@ th:first-child,td:first-child{text-align:center}
     <input id="rate" value="3">
   </div>
 
-  <button class="primary" onclick="calculate()">Calculate Inflation</button>
+  <button class="primary" onclick="calculate()">Calculate</button>
   <button class="secondary" onclick="location.reload()">Reset</button>
+  <button class="print-btn" onclick="window.print()">🖨 Print / Export</button>
 </div>
 
 <!-- RIGHT -->
 <div class="card">
 
   <div class="results">
-    <div class="result">
-      <b id="futureValue">–</b>
-      <small>Future Value</small>
-    </div>
-    <div class="result">
-      <b id="loss">–</b>
-      <small>Purchasing Power Lost</small>
-    </div>
-    <div class="result">
-      <b id="percent">–</b>
-      <small>Total Inflation %</small>
-    </div>
-    <div class="result">
-      <b id="years">–</b>
-      <small>Years</small>
-    </div>
+    <div class="result"><b id="future">–</b><small>Future Value</small></div>
+    <div class="result"><b id="loss">–</b><small>Purchasing Power Lost</small></div>
+    <div class="result"><b id="percent">–</b><small>Total Inflation %</small></div>
+    <div class="result"><b id="years">–</b><small>Years</small></div>
   </div>
 
   <div class="chart-box">
@@ -171,50 +195,55 @@ th:first-child,td:first-child{text-align:center}
 let chart;
 
 function fmt(n){
-  const c=document.getElementById("currency").value;
-  return new Intl.NumberFormat("en-US",{style:"currency",currency:c}).format(n);
+  return new Intl.NumberFormat("en-US",{
+    style:"currency",
+    currency:currency.value
+  }).format(n);
+}
+
+function applyPreset(){
+  if(preset.value) rate.value=preset.value;
 }
 
 function calculate(){
-  const amount=+amountEl.value;
-  const start=+startYearEl.value;
-  const end=+endYearEl.value;
-  const rate=+rateEl.value/100;
+  let amt=+amount.value;
+  let s=+startYear.value;
+  let e=+endYear.value;
+  let r=+rate.value/100;
+  let yrs=e-s;
 
-  if(end<=start){
-    alert("End year must be greater than start year");
-    return;
-  }
-
-  const years=end-start;
-  let value=amount;
+  if(yrs<=0) return alert("End year must be greater than start year");
 
   let labels=[],data=[],rows="";
+  let value=amt;
 
-  for(let y=start;y<=end;y++){
+  if(mode.value==="reverse"){
+    value=amt/Math.pow(1+r,yrs);
+  }
+
+  for(let y=s;y<=e;y++){
     labels.push(y);
     data.push(value);
     rows+=`<tr><td>${y}</td><td>${fmt(value)}</td></tr>`;
-    value*=1+rate;
+    value*=1+r;
   }
 
-  const future=value/(1+rate);
-  const loss=future-amount;
-  const percent=((future/amount)-1)*100;
+  let futureVal=data[data.length-1];
+  let lossVal=futureVal-amt;
+  let percentVal=((futureVal/amt)-1)*100;
 
-  futureValue.textContent=fmt(future);
-  lossEl.textContent=fmt(loss);
-  percentEl.textContent=percent.toFixed(2)+"%";
-  yearsEl.textContent=years+" yrs";
+  future.textContent=fmt(futureVal);
+  loss.textContent=fmt(lossVal);
+  percent.textContent=percentVal.toFixed(2)+"%";
+  years.textContent=yrs+" yrs";
   table.innerHTML=rows;
 
   chart?.destroy();
-  chart=new Chart(document.getElementById("chart"),{
+  chart=new Chart(chartCanvas,{
     type:"line",
     data:{
       labels,
       datasets:[{
-        label:"Inflation Adjusted Value",
         data,
         borderColor:"#2563eb",
         backgroundColor:"rgba(37,99,235,.15)",
@@ -229,14 +258,7 @@ function calculate(){
   });
 }
 
-const amountEl=amount,
-startYearEl=startYear,
-endYearEl=endYear,
-rateEl=rate,
-lossEl=loss,
-percentEl=percent,
-yearsEl=years;
-
+const chartCanvas=document.getElementById("chart");
 calculate();
 </script>
 </body>
